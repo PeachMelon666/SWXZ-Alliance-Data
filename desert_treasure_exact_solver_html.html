@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>S3 Desert Treasure Exact Solver</title>
+  <style>
+    :root {
+      --bg: #f6f2e8;
+      --panel: #fffaf0;
+      --ink: #2d2416;
+      --muted: #7b6b52;
+      --line: #d8c7a4;
+      --gold: #d49a22;
+      --blue: #78b7e8;
+      --red: #e45445;
+      --green: #3aa06a;
+      --shadow: 0 12px 28px rgba(61, 44, 17, .12);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at 20% 10%, #fff7d6 0, transparent 28%), var(--bg);
+      color: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    header {
+      padding: 22px 24px 12px;
+      max-width: 1360px;
+      margin: 0 auto;
+    }
+
+    h1 { margin: 0; font-size: 26px; letter-spacing: .02em; }
+    .subtitle { margin-top: 6px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+
+    main {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 12px 24px 32px;
+      display: grid;
+      grid-template-columns: 350px minmax(620px, 1fr) 330px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .card {
+      background: rgba(255, 250, 240, .92);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+
+    h2 { font-size: 16px; margin: 0 0 12px; }
+    h3 { font-size: 14px; margin: 16px 0 8px; }
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    select, input, button, textarea {
+      font: inherit;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fffdfa;
+      color: var(--ink);
+    }
+    select, input { width: 100%; padding: 9px 10px; }
+    textarea { width: 100%; min-height: 78px; padding: 10px; resize: vertical; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+
+    button {
+      padding: 9px 12px;
+      cursor: pointer;
+      background: linear-gradient(#fff8e8, #f4e1b9);
+      border-color: #c9aa64;
+      font-weight: 650;
+    }
+    button.primary { background: linear-gradient(#ffe08c, #d69d26); border-color: #b88419; color: #2b1c06; }
+    button.danger { background: linear-gradient(#ffe4df, #f0b1a8); border-color: #d07c70; }
+    button.small { padding: 6px 8px; border-radius: 10px; font-size: 12px; }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .btnrow { display: flex; gap: 8px; flex-wrap: wrap; }
+    .hint { color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 9px;
+      border-radius: 999px;
+      background: #fff3cf;
+      border: 1px solid #e3c37c;
+      font-size: 12px;
+      margin: 3px;
+    }
+    .pill.active { outline: 2px solid var(--gold); }
+
+    .artifact-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .artifact-btn {
+      text-align: left;
+      min-height: 54px;
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      background: #fffdfa;
+    }
+    .mini-shape {
+      display: grid;
+      gap: 2px;
+      justify-content: start;
+      align-content: center;
+    }
+    .mini-cell { width: 8px; height: 8px; border-radius: 2px; background: var(--gold); border: 1px solid #a67613; }
+
+    .grid-wrap { overflow: auto; padding-bottom: 4px; }
+    #grid {
+      display: grid;
+      gap: 3px;
+      width: max-content;
+      padding: 10px;
+      border-radius: 16px;
+      background: #c9a965;
+      border: 1px solid #b78f3e;
+    }
+    .cell {
+      width: 56px;
+      height: 46px;
+      border-radius: 8px;
+      border: 1px solid rgba(92, 67, 24, .28);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      font-weight: 750;
+      font-size: 13px;
+      user-select: none;
+      cursor: pointer;
+      transition: transform .06s ease, box-shadow .06s ease;
+      color: #132033;
+    }
+    .cell:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,.15); z-index: 2; }
+    .cell .score { position: absolute; bottom: 3px; right: 5px; font-size: 10px; color: rgba(0,0,0,.52); }
+    .cell.empty { background: #34425a !important; color: white; }
+    .cell.empty::before { content: "X"; font-size: 20px; color: #fff; }
+    .cell.placed { background: #8061b7 !important; color: white; }
+    .cell.placed::before { content: attr(data-art); font-size: 11px; padding: 2px 4px; }
+    .cell.best { outline: 3px solid #2d2416; outline-offset: -3px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 7px 6px; border-bottom: 1px solid #eadbbb; text-align: left; }
+    th { color: var(--muted); font-size: 12px; font-weight: 700; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .stat {
+      border: 1px solid #eadbbb;
+      border-radius: 14px;
+      padding: 10px;
+      background: #fffdfa;
+    }
+    .stat b { display: block; font-size: 18px; margin-top: 3px; }
+    .warn { color: #9b4a0f; background: #fff1d6; border: 1px solid #edc170; padding: 8px 10px; border-radius: 12px; font-size: 12px; line-height: 1.45; }
+
+    @media (max-width: 1180px) {
+      main { grid-template-columns: 1fr; }
+      .cell { width: 48px; height: 42px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>S3 沙漠寶庫 Exact Solver</h1>
+    <div class="subtitle">用完整枚舉計算命中概率，並用「一步信息增益」評估同概率格子的後續局面優劣。命中後建議直接把已確定的文物放入盤面；敲空則標記 X。</div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>1. 盤面與文物</h2>
+      <div class="row">
+        <div>
+          <label>Grid Size</label>
+          <select id="gridSize">
+            <option value="4x7">4x7 Grid (solo)</option>
+            <option value="10x12">10x12 Grid (alliance)</option>
+          </select>
+        </div>
+        <div>
+          <label>模式</label>
+          <select id="actionMode">
+            <option value="empty">點格子：標 X / 取消 X</option>
+            <option value="place">點格子：放置選中文物左上角</option>
+          </select>
+        </div>
+      </div>
+
+      <h3>可選文物</h3>
+      <div id="artifactPalette" class="artifact-list"></div>
+      <div class="hint" style="margin-top:8px;">網站文本列出的文物包含 1x1、2x2、1x2、4x1、3x2、1x4、2x3、3x3、3x4(A/B)。此原型默認把它們作為固定方向矩形足跡；若遊戲允許旋轉，再打開下方旋轉選項。</div>
+
+      <h3>已選文物</h3>
+      <div id="selectedArtifacts"></div>
+      <div class="btnrow" style="margin-top:10px;">
+        <button class="small" id="clearArtifacts">清空文物</button>
+        <button class="small danger" id="resetBoard">重置盤面</button>
+      </div>
+
+      <h3>高級選項</h3>
+      <label><input id="allowRotate" type="checkbox" style="width:auto; vertical-align:middle;"> 允許矩形 90° 旋轉</label>
+      <label><input id="scoreEnabled" type="checkbox" checked style="width:auto; vertical-align:middle;"> 計算一步信息增益評分</label>
+      <label>最多保存完整 case 數（用於評分，過大會自動只算概率）</label>
+      <input id="worldCap" type="number" min="1000" max="2000000" step="1000" value="200000" />
+      <div class="btnrow" style="margin-top:10px;">
+        <button class="primary" id="solveBtn">Exact Calculate</button>
+      </div>
+      <div id="status" class="hint" style="margin-top:10px;"></div>
+    </section>
+
+    <section class="card">
+      <h2>2. Artifact Hunt Map</h2>
+      <div class="grid-wrap"><div id="grid"></div></div>
+      <div class="hint" style="margin-top:10px;">顏色規則：藍色低概率，黃色中概率，紅色高概率；紫色為已放入文物；深色 X 為已確認空格。黑框是當前推薦格。</div>
+    </section>
+
+    <aside class="card">
+      <h2>3. 結果</h2>
+      <div class="stat-grid">
+        <div class="stat">總 case<b id="totalCases">-</b></div>
+        <div class="stat">最高概率<b id="bestProb">-</b></div>
+      </div>
+      <h3>推薦格</h3>
+      <table>
+        <thead><tr><th>格子</th><th>命中率</th><th>信息增益</th><th>期望剩餘 case</th></tr></thead>
+        <tbody id="recommendRows"></tbody>
+      </table>
+      <h3>算法說明</h3>
+      <div class="hint">
+        <p><b>概率：</b>枚舉所有與 X、已放文物、不重疊約束一致的完整擺放方案。某格概率 = 覆蓋該格的完整方案數 / 完整方案總數。</p>
+        <p><b>評分：</b>對每個可敲格，把所有完整方案按本次敲擊會得到的觀測結果分組：miss、或命中某個文物的某個位置。分組越均勻，信息增益越高；期望剩餘 case 越低。</p>
+        <p><b>注意：</b>這裡假設每個合法完整盤面等概率。如果遊戲實際是按某個固定順序隨機放文物，且重疊就重試，合法盤面的權重可能不同，需要改成加權枚舉。</p>
+      </div>
+      <div id="warning" class="warn" style="display:none; margin-top:12px;"></div>
+    </aside>
+  </main>
+
+<script>
+(() => {
+  const TYPES = [
+    { key: '1x1', name: '1x1 Square', h: 1, w: 1 },
+    { key: '2x2', name: '2x2 Square', h: 2, w: 2 },
+    { key: '1x2', name: '1x2 Rectangle', h: 1, w: 2 },
+    { key: '4x1', name: '4x1 Rectangle', h: 4, w: 1 },
+    { key: '3x2', name: '3x2 Rectangle', h: 3, w: 2 },
+    { key: '1x4', name: '1x4 Rectangle', h: 1, w: 4 },
+    { key: '2x3', name: '2x3 Rectangle', h: 2, w: 3 },
+    { key: '3x3', name: '3x3 Square', h: 3, w: 3 },
+    { key: '3x4a', name: '3x4 Rectangle (A)', h: 3, w: 4 },
+    { key: '3x4b', name: '3x4 Rectangle (B)', h: 3, w: 4 },
+  ];
+
+  const state = {
+    rows: 4,
+    cols: 7,
+    selected: [],
+    empty: 0n,
+    placed: new Map(),
+    activeArtifactId: null,
+    results: null,
+  };
+  let nextId = 1;
+
+  const $ = (id) => document.getElementById(id);
+  const idx = (r, c) => BigInt(r * state.cols + c);
+  const bit = (r, c) => 1n << idx(r, c);
+  const hasBit = (mask, i) => ((mask >> BigInt(i)) & 1n) === 1n;
+  const cellName = (i) => `${Math.floor(i / state.cols) + 1},${(i % state.cols) + 1}`;
+
+  function shapeMini(type) {
+    const wrap = document.createElement('div');
+    wrap.className = 'mini-shape';
+    wrap.style.gridTemplateColumns = `repeat(${type.w}, 8px)`;
+    for (let i = 0; i < type.h * type.w; i++) {
+      const c = document.createElement('div');
+      c.className = 'mini-cell';
+      wrap.appendChild(c);
+    }
+    return wrap;
+  }
+
+  function renderPalette() {
+    const root = $('artifactPalette');
+    root.innerHTML = '';
+    TYPES.forEach(type => {
+      const btn = document.createElement('button');
+      btn.className = 'artifact-btn';
+      btn.appendChild(shapeMini(type));
+      const span = document.createElement('span');
+      span.innerHTML = `<b>${type.name}</b><br><span class="hint">${type.h}×${type.w}</span>`;
+      btn.appendChild(span);
+      btn.onclick = () => addArtifact(type);
+      root.appendChild(btn);
+    });
+  }
+
+  function maxArtifacts() {
+    return $('gridSize').value === '4x7' ? 3 : 12;
+  }
+
+  function addArtifact(type) {
+    if (state.selected.length >= maxArtifacts()) {
+      setStatus(`已達當前模式上限：${maxArtifacts()} 個文物。`);
+      return;
+    }
+    const item = { ...type, id: nextId++, label: `${type.key}#${nextId - 1}` };
+    state.selected.push(item);
+    state.activeArtifactId = item.id;
+    renderSelected();
+    renderGrid();
+  }
+
+  function renderSelected() {
+    const root = $('selectedArtifacts');
+    root.innerHTML = '';
+    if (!state.selected.length) {
+      root.innerHTML = '<div class="hint">尚未選擇文物。</div>';
+      return;
+    }
+    state.selected.forEach(a => {
+      const pill = document.createElement('span');
+      pill.className = 'pill' + (state.activeArtifactId === a.id ? ' active' : '');
+      const placed = state.placed.has(a.id) ? '已放' : '未放';
+      pill.innerHTML = `${a.label} <span class="hint">${placed}</span> <button class="small">×</button>`;
+      pill.onclick = (e) => {
+        if (e.target.tagName === 'BUTTON') {
+          state.selected = state.selected.filter(x => x.id !== a.id);
+          state.placed.delete(a.id);
+          if (state.activeArtifactId === a.id) state.activeArtifactId = state.selected[0]?.id ?? null;
+        } else {
+          state.activeArtifactId = a.id;
+          $('actionMode').value = 'place';
+        }
+        state.results = null;
+        renderSelected();
+        renderGrid();
+      };
+      root.appendChild(pill);
+    });
+  }
+
+  function resizeGrid() {
+    const [r, c] = $('gridSize').value.split('x').map(Number);
+    state.rows = r; state.cols = c;
+    state.empty = 0n;
+    state.placed.clear();
+    state.results = null;
+    if (state.selected.length > maxArtifacts()) state.selected = state.selected.slice(0, maxArtifacts());
+    renderSelected();
+    renderGrid();
+  }
+
+  function renderGrid() {
+    const grid = $('grid');
+    grid.innerHTML = '';
+    grid.style.gridTemplateColumns = `repeat(${state.cols}, 56px)`;
+    const N = state.rows * state.cols;
+    const placedCell = new Array(N).fill(null);
+    state.placed.forEach((p, id) => {
+      for (let i = 0; i < N; i++) if (hasBit(p.mask, i)) placedCell[i] = id;
+    });
+    const probs = state.results?.prob ?? new Array(N).fill(null);
+    const scores = state.results?.score ?? new Array(N).fill(null);
+    const bestIndex = state.results?.bestIndex ?? -1;
+
+    for (let i = 0; i < N; i++) {
+      const div = document.createElement('div');
+      div.className = 'cell';
+      div.dataset.i = i;
+      if (i === bestIndex) div.classList.add('best');
+      if (hasBit(state.empty, i)) {
+        div.classList.add('empty');
+      } else if (placedCell[i] !== null) {
+        div.classList.add('placed');
+        div.dataset.art = String(placedCell[i]);
+      } else {
+        const p = probs[i];
+        div.style.background = p == null ? '#f2ddb1' : heatColor(p);
+        if (p != null) div.textContent = `${Math.round(p * 100)}%`;
+        if (scores[i]?.infoGain != null && $('scoreEnabled').checked) {
+          const s = document.createElement('span');
+          s.className = 'score';
+          s.textContent = scores[i].infoGain.toFixed(2);
+          div.appendChild(s);
+        }
+      }
+      div.onclick = () => cellClick(i);
+      grid.appendChild(div);
+    }
+  }
+
+  function heatColor(p) {
+    p = Math.max(0, Math.min(1, p));
+    // blue -> yellow -> red, deliberately keeps high probability red.
+    let r, g, b;
+    if (p < 0.5) {
+      const t = p / 0.5;
+      r = Math.round(118 + t * (255 - 118));
+      g = Math.round(183 + t * (220 - 183));
+      b = Math.round(232 + t * (80 - 232));
+    } else {
+      const t = (p - 0.5) / 0.5;
+      r = Math.round(255 + t * (226 - 255));
+      g = Math.round(220 + t * (70 - 220));
+      b = Math.round(80 + t * (55 - 80));
+    }
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+
+  function cellClick(i) {
+    const r = Math.floor(i / state.cols), c = i % state.cols;
+    if ($('actionMode').value === 'empty') {
+      const b = 1n << BigInt(i);
+      state.empty = (state.empty & b) ? (state.empty & ~b) : (state.empty | b);
+    } else {
+      const art = state.selected.find(a => a.id === state.activeArtifactId);
+      if (!art) { setStatus('請先選中一個文物。'); return; }
+      const m = rectMask(r, c, art.h, art.w);
+      if (m == null) { setStatus('放置超出邊界。'); return; }
+      const otherPlaced = [...state.placed.entries()].reduce((acc, [id, p]) => id === art.id ? acc : (acc | p.mask), 0n);
+      if ((m & (state.empty | otherPlaced)) !== 0n) { setStatus('放置位置與 X 或其他文物重疊。'); return; }
+      if (state.placed.has(art.id)) state.placed.delete(art.id); else state.placed.set(art.id, { mask: m, r, c, h: art.h, w: art.w });
+    }
+    state.results = null;
+    renderSelected();
+    renderGrid();
+  }
+
+  function rectMask(r0, c0, h, w) {
+    if (r0 + h > state.rows || c0 + w > state.cols) return null;
+    let m = 0n;
+    for (let r = r0; r < r0 + h; r++) for (let c = c0; c < c0 + w; c++) m |= bit(r, c);
+    return m;
+  }
+
+  function placementsFor(art, blocked) {
+    const dims = [[art.h, art.w]];
+    if ($('allowRotate').checked && art.h !== art.w) dims.push([art.w, art.h]);
+    const out = [];
+    for (const [h, w] of dims) {
+      for (let r = 0; r <= state.rows - h; r++) {
+        for (let c = 0; c <= state.cols - w; c++) {
+          const m = rectMask(r, c, h, w);
+          if (m != null && (m & blocked) === 0n) out.push({ artId: art.id, label: art.label, mask: m, r, c, h, w });
+        }
+      }
+    }
+    return out;
+  }
+
+  function solve() {
+    const t0 = performance.now();
+    $('warning').style.display = 'none';
+    const N = state.rows * state.cols;
+    const placedMask = [...state.placed.values()].reduce((acc, p) => acc | p.mask, 0n);
+    if ((placedMask & state.empty) !== 0n) return warn('已放文物與 X 重疊，請修正盤面。');
+    const remaining = state.selected.filter(a => !state.placed.has(a.id));
+    if (!state.selected.length) return warn('請先選擇文物。');
+
+    const baseBlocked = state.empty | placedMask;
+    let candidateMap = new Map();
+    for (const art of remaining) {
+      const list = placementsFor(art, baseBlocked);
+      if (!list.length) return warn(`${art.label} 沒有任何合法位置。`);
+      candidateMap.set(art.id, list);
+    }
+
+    const hitCounts = Array.from({ length: N }, () => 0n);
+    const worlds = [];
+    const cap = Math.max(1000, Number($('worldCap').value || 200000));
+    let total = 0n;
+    let truncatedWorlds = false;
+    const path = [];
+
+    function dfs(remIds, occupied, unionMask) {
+      if (remIds.length === 0) {
+        total++;
+        for (let i = 0; i < N; i++) if (hasBit(unionMask, i)) hitCounts[i]++;
+        if (worlds.length < cap) worlds.push(path.map(x => x)); else truncatedWorlds = true;
+        return;
+      }
+
+      // MRV: choose artifact with fewest currently legal placements.
+      let bestK = -1, bestList = null;
+      for (let k = 0; k < remIds.length; k++) {
+        const legal = candidateMap.get(remIds[k]).filter(p => (p.mask & occupied) === 0n);
+        if (bestList == null || legal.length < bestList.length) { bestList = legal; bestK = k; }
+      }
+      if (!bestList || bestList.length === 0) return;
+      const id = remIds[bestK];
+      const nextRem = remIds.filter(x => x !== id);
+      for (const p of bestList) {
+        path.push(p);
+        dfs(nextRem, occupied | p.mask, unionMask | p.mask);
+        path.pop();
+      }
+    }
+
+    dfs(remaining.map(a => a.id), baseBlocked, 0n);
+    if (total === 0n) return warn('沒有任何完整合法 case。');
+
+    const totalNum = Number(total);
+    const prob = hitCounts.map(x => Number(x) / totalNum);
+    let score = new Array(N).fill(null);
+    let bestIndex = -1;
+    let bestProb = -1;
+
+    const canScore = $('scoreEnabled').checked && !truncatedWorlds && worlds.length === totalNum && remaining.length > 0;
+    if (canScore) {
+      score = computeScores(worlds, totalNum, N, placedMask);
+      let bestRank = null;
+      for (let i = 0; i < N; i++) {
+        if (hasBit(baseBlocked, i)) continue;
+        const rank = [prob[i], score[i].infoGain, -score[i].expectedCases];
+        if (!bestRank || compareRank(rank, bestRank) > 0) { bestRank = rank; bestIndex = i; }
+      }
+    } else {
+      for (let i = 0; i < N; i++) {
+        if (hasBit(baseBlocked, i)) continue;
+        if (prob[i] > bestProb) { bestProb = prob[i]; bestIndex = i; }
+      }
+      if (truncatedWorlds && $('scoreEnabled').checked) warn(`case 數超過保存上限 ${cap.toLocaleString()}，已完成精確概率，但跳過一步評分。調大上限或縮小盤面後可評分。`, false);
+    }
+
+    state.results = { prob, score, bestIndex };
+    $('totalCases').textContent = total.toLocaleString();
+    $('bestProb').textContent = `${Math.round(prob[bestIndex] * 10000) / 100}%`;
+    renderRecommendations(prob, score, baseBlocked, canScore);
+    renderGrid();
+    setStatus(`完成：${(performance.now() - t0).toFixed(0)} ms。${canScore ? '已計算一步評分。' : '已計算概率。'}`);
+  }
+
+  function compareRank(a, b) {
+    for (let i = 0; i < a.length; i++) if (Math.abs(a[i] - b[i]) > 1e-12) return a[i] > b[i] ? 1 : -1;
+    return 0;
+  }
+
+  function computeScores(worlds, totalNum, N, placedMask) {
+    const scores = [];
+    const baseEntropy = Math.log2(totalNum);
+    for (let i = 0; i < N; i++) {
+      if (hasBit(state.empty | placedMask, i)) { scores[i] = { infoGain: null, expectedCases: null }; continue; }
+      const groups = new Map();
+      for (const world of worlds) {
+        let key = 'miss';
+        for (const p of world) {
+          if (hasBit(p.mask, i)) { key = `${p.artId}@${p.r},${p.c},${p.h},${p.w}`; break; }
+        }
+        groups.set(key, (groups.get(key) || 0) + 1);
+      }
+      let expectedEntropy = 0;
+      let expectedCases = 0;
+      for (const cnt of groups.values()) {
+        const p = cnt / totalNum;
+        expectedEntropy += p * Math.log2(cnt);
+        expectedCases += p * cnt;
+      }
+      scores[i] = { infoGain: baseEntropy - expectedEntropy, expectedCases };
+    }
+    return scores;
+  }
+
+  function renderRecommendations(prob, score, blocked, canScore) {
+    const rows = [];
+    for (let i = 0; i < prob.length; i++) {
+      if (hasBit(blocked, i)) continue;
+      rows.push({ i, p: prob[i], s: score[i] });
+    }
+    rows.sort((a, b) => {
+      if (Math.abs(b.p - a.p) > 1e-12) return b.p - a.p;
+      if (canScore && Math.abs((b.s?.infoGain ?? 0) - (a.s?.infoGain ?? 0)) > 1e-12) return (b.s.infoGain - a.s.infoGain);
+      if (canScore) return (a.s.expectedCases - b.s.expectedCases);
+      return a.i - b.i;
+    });
+    const body = $('recommendRows');
+    body.innerHTML = '';
+    rows.slice(0, 10).forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td class="mono">${cellName(r.i)}</td><td>${(r.p * 100).toFixed(2)}%</td><td>${canScore ? r.s.infoGain.toFixed(3) : '-'}</td><td>${canScore ? r.s.expectedCases.toFixed(1) : '-'}</td>`;
+      body.appendChild(tr);
+    });
+  }
+
+  function warn(text, keepResults = true) {
+    const w = $('warning');
+    w.textContent = text;
+    w.style.display = 'block';
+    if (!keepResults) return;
+    $('totalCases').textContent = '-';
+    $('bestProb').textContent = '-';
+    $('recommendRows').innerHTML = '';
+  }
+
+  function setStatus(text) { $('status').textContent = text; }
+
+  $('gridSize').onchange = resizeGrid;
+  $('solveBtn').onclick = solve;
+  $('clearArtifacts').onclick = () => { state.selected = []; state.placed.clear(); state.activeArtifactId = null; state.results = null; renderSelected(); renderGrid(); };
+  $('resetBoard').onclick = () => { state.empty = 0n; state.placed.clear(); state.results = null; renderSelected(); renderGrid(); $('totalCases').textContent = '-'; $('bestProb').textContent = '-'; $('recommendRows').innerHTML = ''; };
+  $('allowRotate').onchange = () => { state.results = null; renderGrid(); };
+  $('scoreEnabled').onchange = () => { state.results = null; renderGrid(); };
+
+  renderPalette();
+  renderSelected();
+  renderGrid();
+})();
+</script>
+</body>
+</html>
